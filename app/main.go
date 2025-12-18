@@ -1,43 +1,50 @@
 package main
 
 import (
-	"errors"
+	"bufio"
 	"fmt"
-	"io"
 
-	netinfra "github.com/codecrafters-io/redis-starter-go/internal/infrestructure/net"
+	"github.com/codecrafters-io/redis-starter-go/internal/application"
+	"github.com/codecrafters-io/redis-starter-go/internal/infrastructure/codec"
+	netinfra "github.com/codecrafters-io/redis-starter-go/internal/infrastructure/net"
 	"github.com/codecrafters-io/redis-starter-go/internal/ports"
 )
 
-const (
-	serverAddr = "localhost:6379"
-)
+const serverAddr = "localhost:6379"
 
 func main() {
-	fmt.Println("Logs from your program will appear here!")
 	server := netinfra.NewTCPServer(serverAddr)
+	processor := application.NewProcessor()
+	builder := codec.BuilderResponse{}
+
 	server.Start(func(conn ports.Connection) {
 		defer conn.Close()
 
-		buf := make([]byte, 1024)
+		reader := bufio.NewReader(conn)
+		parser := codec.NewRespParser(reader)
 
 		for {
-			n, err := conn.Read(buf)
+			cmd, err := parser.ReadCommand()
 			if err != nil {
-				if errors.Is(err, io.EOF) {
-					return
-				}
-				fmt.Println(err)
+				fmt.Println("read error:", err)
 				return
 			}
-			fmt.Printf("Received %d bytes\n", n)
 
-			_, err = conn.Write([]byte("+PONG\r\n"))
+			res, err := processor.Process(cmd)
 			if err != nil {
-				fmt.Println(err)
+				fmt.Println("process error:", err)
+				return
+			}
+
+			raw, err := builder.Build(res)
+			if err != nil {
+				fmt.Println("build error:", err)
+				return
+			}
+
+			if _, err := conn.Write(raw); err != nil {
 				return
 			}
 		}
 	})
-	
 }
