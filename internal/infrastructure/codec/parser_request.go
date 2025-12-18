@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/codecrafters-io/redis-starter-go/internal/application"
 )
@@ -39,13 +40,7 @@ func (p *RespParser) ReadCommand() (application.Command, error) {
 		return application.EchoCommand{Value: args[1]}, nil
 
 	case "SET":
-		if len(args) != 3 {
-			return nil, fmt.Errorf("SET expects 2 arguments")
-		}
-		return application.SetCommand{
-			Key:   args[1],
-			Value: args[2],
-		}, nil
+		return p.parseSet(args)
 
 	case "GET":
 		if len(args) != 2 {
@@ -141,4 +136,45 @@ func (p *RespParser) readBulkString() (string, error) {
 	}
 
 	return string(buf), nil
+}
+
+func (p *RespParser) parseSet(args []string) (application.Command, error) {
+
+	if len(args) < 3 {
+		return nil, fmt.Errorf("SET expects at least 2 arguments")
+	}
+
+	key := args[1]
+	value := args[2]
+
+	var px *time.Duration
+
+	i := 3
+	for i < len(args) {
+		switch strings.ToUpper(args[i]) {
+
+		case "PX":
+			if i+1 >= len(args) {
+				return nil, fmt.Errorf("PX requires a value")
+			}
+
+			ms, err := strconv.Atoi(args[i+1])
+			if err != nil || ms < 0 {
+				return nil, fmt.Errorf("invalid PX value")
+			}
+
+			d := time.Duration(ms) * time.Millisecond
+			px = &d
+			i += 2
+
+		default:
+			return nil, fmt.Errorf("unknown SET option: %s", args[i])
+		}
+	}
+
+	return application.SetCommand{
+		Key:   key,
+		Value: value,
+		PX:    px,
+	}, nil
 }

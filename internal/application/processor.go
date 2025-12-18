@@ -23,7 +23,7 @@ func (p *Processor) Handle(cmd Command) (response.Response, error) {
 		return response.BulkString{Value: &c.Value}, nil
 
 	case SetCommand:
-		if err := p.storage.Set(c.Key, c.Value); err != nil {
+		if err := p.storage.Set(c.Key, c.Value, ports.SetOptions{PX: c.PX}); err != nil {
 			return response.ErrorString{Message: "ERR internal error"}, nil
 		}
 		return response.SimpleString{Value: "OK"}, nil
