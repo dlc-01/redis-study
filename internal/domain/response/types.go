@@ -7,7 +7,13 @@ type SimpleString struct {
 func (SimpleString) isResponse() {}
 
 type BulkString struct {
-	Value string
+	Value *string
 }
 
 func (BulkString) isResponse() {}
+
+type ErrorString struct {
+	Message string
+}
+
+func (ErrorString) isResponse() {}

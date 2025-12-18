@@ -1,7 +1,5 @@
 package application
 
-type Command struct {
-	Name string
-	Args []string
-	Raw  []byte
+type Command interface {
+	Name() string
 }

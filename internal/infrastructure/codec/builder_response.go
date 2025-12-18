@@ -8,16 +8,21 @@ import (
 
 type BuilderResponse struct{}
 
-func (b BuilderResponse) Build(res response.Response) ([]byte, error) {
-	switch v := res.(type) {
+func (b BuilderResponse) Build(resp response.Response) ([]byte, error) {
+	switch r := resp.(type) {
 
 	case response.SimpleString:
-		return []byte(fmt.Sprintf("+%s\r\n", v.Value)), nil
+		return []byte(fmt.Sprintf("+%s\r\n", r.Value)), nil
 
 	case response.BulkString:
-		return []byte(fmt.Sprintf("$%d\r\n%s\r\n", len(v.Value), v.Value)), nil
-
-	default:
-		return nil, fmt.Errorf("unknown response type %T", v)
+		if r.Value == nil {
+			return []byte("$-1\r\n"), nil
+		}
+		s := *r.Value
+		return []byte(fmt.Sprintf("$%d\r\n%s\r\n", len(s), s)), nil
+	case response.ErrorString:
+		return []byte(fmt.Sprintf("-%s\r\n", r.Message)), nil
 	}
+
+	return nil, fmt.Errorf("unsupported response type")
 }

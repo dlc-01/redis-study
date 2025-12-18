@@ -2,7 +2,7 @@ package codec
 
 import (
 	"bufio"
-	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -18,67 +18,127 @@ func NewRespParser(r *bufio.Reader) *RespParser {
 }
 
 func (p *RespParser) ReadCommand() (application.Command, error) {
-	size, err := p.readArraySize()
+	args, err := p.readArray()
 	if err != nil {
-		return application.Command{}, err
+		return nil, err
 	}
 
-	parts := make([]string, 0, size)
-	for i := 0; i < size; i++ {
-		s, err := p.readBulkString()
-		if err != nil {
-			return application.Command{}, err
+	if len(args) == 0 {
+		return nil, fmt.Errorf("empty command")
+	}
+
+	switch strings.ToUpper(args[0]) {
+
+	case "PING":
+		return application.PingCommand{}, nil
+
+	case "ECHO":
+		if len(args) != 2 {
+			return nil, fmt.Errorf("ECHO expects 1 argument")
 		}
-		parts = append(parts, s)
+		return application.EchoCommand{Value: args[1]}, nil
+
+	case "SET":
+		if len(args) != 3 {
+			return nil, fmt.Errorf("SET expects 2 arguments")
+		}
+		return application.SetCommand{
+			Key:   args[1],
+			Value: args[2],
+		}, nil
+
+	case "GET":
+		if len(args) != 2 {
+			return nil, fmt.Errorf("GET expects 1 argument")
+		}
+		return application.GetCommand{
+			Key: args[1],
+		}, nil
 	}
 
-	if len(parts) == 0 {
-		return application.Command{}, errors.New("empty command")
-	}
-
-	return application.Command{
-		Name: strings.ToUpper(parts[0]),
-		Args: parts[1:],
-	}, nil
+	return nil, fmt.Errorf("unknown command")
 }
 
-func (p *RespParser) readArraySize() (int, error) {
+func (p *RespParser) readArray() ([]string, error) {
 	b, err := p.reader.ReadByte()
-	if err != nil || b != '*' {
-		return 0, errors.New("expected array")
+	if err != nil {
+		return nil, err
+	}
+	if b != '*' {
+		return nil, fmt.Errorf("expected array, got %q", b)
 	}
 
+	n, err := p.readInt()
+	if err != nil {
+		return nil, err
+	}
+
+	if n < 0 {
+		return nil, fmt.Errorf("invalid array size")
+	}
+
+	result := make([]string, 0, n)
+
+	for i := 0; i < n; i++ {
+		s, err := p.readBulkString()
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, s)
+	}
+
+	return result, nil
+}
+
+func (p *RespParser) readInt() (int, error) {
 	line, err := p.reader.ReadString('\n')
 	if err != nil {
 		return 0, err
 	}
 
-	return strconv.Atoi(strings.TrimSpace(line))
+	line = line[:len(line)-2]
+
+	n, err := strconv.Atoi(line)
+	if err != nil {
+		return 0, fmt.Errorf("invalid integer: %q", line)
+	}
+
+	return n, nil
 }
 
 func (p *RespParser) readBulkString() (string, error) {
 	b, err := p.reader.ReadByte()
-	if err != nil || b != '$' {
-		return "", errors.New("expected bulk string")
+	if err != nil {
+		return "", err
+	}
+	if b != '$' {
+		return "", fmt.Errorf("expected bulk string, got %q", b)
 	}
 
-	line, err := p.reader.ReadString('\n')
+	n, err := p.readInt()
 	if err != nil {
 		return "", err
 	}
 
-	n, err := strconv.Atoi(strings.TrimSpace(line))
-	if err != nil {
-		return "", err
+	if n < 0 {
+		return "", nil
 	}
 
 	buf := make([]byte, n)
-	if _, err := p.reader.Read(buf); err != nil {
+	_, err = p.reader.Read(buf)
+	if err != nil {
 		return "", err
 	}
-	
-	p.reader.ReadByte()
-	p.reader.ReadByte()
+
+	cr, err := p.reader.ReadByte()
+	if err != nil || cr != '\r' {
+		return "", fmt.Errorf("expected CR after bulk string")
+	}
+
+	lf, err := p.reader.ReadByte()
+	if err != nil || lf != '\n' {
+		return "", fmt.Errorf("expected LF after bulk string")
+	}
 
 	return string(buf), nil
 }

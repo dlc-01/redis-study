@@ -7,44 +7,43 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/internal/application"
 	"github.com/codecrafters-io/redis-starter-go/internal/infrastructure/codec"
 	netinfra "github.com/codecrafters-io/redis-starter-go/internal/infrastructure/net"
+	"github.com/codecrafters-io/redis-starter-go/internal/infrastructure/storage"
 	"github.com/codecrafters-io/redis-starter-go/internal/ports"
 )
 
-const serverAddr = "localhost:6379"
-
 func main() {
-	server := netinfra.NewTCPServer(serverAddr)
-	processor := application.NewProcessor()
+	server := netinfra.NewTCPServer("localhost:6379")
+	storageMem := storage.NewMemoryStorage()
+	processor := application.NewProcessor(storageMem)
 	builder := codec.BuilderResponse{}
 
 	server.Start(func(conn ports.Connection) {
 		defer conn.Close()
 
 		reader := bufio.NewReader(conn)
-		parser := codec.NewRespParser(reader)
 
 		for {
+			parser := codec.NewRespParser(reader)
+
 			cmd, err := parser.ReadCommand()
 			if err != nil {
-				fmt.Println("read error:", err)
+				fmt.Println(err)
 				return
 			}
 
-			res, err := processor.Process(cmd)
+			resp, err := processor.Handle(cmd)
 			if err != nil {
-				fmt.Println("process error:", err)
+				fmt.Println(err)
 				return
 			}
 
-			raw, err := builder.Build(res)
+			raw, err := builder.Build(resp)
 			if err != nil {
-				fmt.Println("build error:", err)
+				fmt.Println(err)
 				return
 			}
 
-			if _, err := conn.Write(raw); err != nil {
-				return
-			}
+			conn.Write(raw)
 		}
 	})
 }
