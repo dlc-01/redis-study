@@ -13,6 +13,7 @@ type Storage interface {
 	RPush(key string, values ...string) (int, error)
 	LPush(key string, values ...string) (int, error)
 	LPop(key string) (string, bool, error)
+	LPopN(key string, count int) ([]string, error)
 	RPop(key string) (string, bool, error)
 	LRange(key string, start, stop int) ([]string, error)
 	LLen(key string) (int, error)

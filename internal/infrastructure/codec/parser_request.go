@@ -94,6 +94,26 @@ func (p *RespParser) ReadCommand() (application.Command, error) {
 		return application.LLenCommand{
 			Key: args[1],
 		}, nil
+	case "LPOP":
+		if len(args) == 2 {
+			return application.LPopCommand{
+				Key:   args[1],
+				Count: nil,
+			}, nil
+		}
+
+		if len(args) == 3 {
+			n, err := strconv.Atoi(args[2])
+			if err != nil || n < 0 {
+				return nil, fmt.Errorf("invalid count")
+			}
+			return application.LPopCommand{
+				Key:   args[1],
+				Count: &n,
+			}, nil
+		}
+
+		return nil, fmt.Errorf("LPOP expects 1 or 2 arguments")
 
 	}
 

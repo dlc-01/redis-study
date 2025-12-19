@@ -85,6 +85,31 @@ func (p *Processor) Handle(cmd Command) (response.Response, error) {
 		}
 		return response.Integer{Value: n}, nil
 
+	case LPopCommand:
+		if c.Count == nil {
+			v, ok, err := p.storage.LPop(c.Key)
+			if err != nil {
+				return response.ErrorString{Message: err.Error()}, nil
+			}
+			if !ok {
+				return response.BulkString{Value: nil}, nil
+			}
+			return response.BulkString{Value: &v}, nil
+		}
+
+		values, err := p.storage.LPopN(c.Key, *c.Count)
+		if err != nil {
+			return response.ErrorString{Message: err.Error()}, nil
+		}
+
+		resp := make([]response.Response, 0, len(values))
+		for _, v := range values {
+			val := v
+			resp = append(resp, response.BulkString{Value: &val})
+		}
+
+		return response.Array{Values: resp}, nil
+
 	}
 
 	return response.ErrorString{Message: "ERR unknown command"}, nil

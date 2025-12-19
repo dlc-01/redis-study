@@ -161,6 +161,32 @@ func (s *MemoryStorage) LPop(key string) (string, bool, error) {
 	return v, true, nil
 }
 
+func (s *MemoryStorage) LPopN(key string, count int) ([]string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if count <= 0 {
+		return []string{}, nil
+	}
+
+	it, ok := s.data[key]
+	if !ok || it.kind != typeList || len(it.list) == 0 {
+		return []string{}, nil
+	}
+
+	if count >= len(it.list) {
+		out := append([]string{}, it.list...)
+		delete(s.data, key)
+		return out, nil
+	}
+
+	out := append([]string{}, it.list[:count]...)
+	it.list = it.list[count:]
+	s.data[key] = it
+
+	return out, nil
+}
+
 func (s *MemoryStorage) RPop(key string) (string, bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -230,7 +256,7 @@ func (s *MemoryStorage) LLen(key string) (int, error) {
 	if !ok {
 		return 0, nil
 	}
-	
+
 	if it.expiresAt != nil && time.Now().After(*it.expiresAt) {
 		delete(s.data, key)
 		return 0, nil
