@@ -50,6 +50,8 @@ func (p *Processor) Handle(cmd Command) (response.Response, error) {
 	case list.BLPopCommand:
 		return handlers.HandleBLPop(p.storage, c)
 
+	case commandString.TypeCommand:
+		return handlers.HandleType(p.storage, c)
 	}
 
 	return response.ErrorString{Message: "ERR unknown command"}, nil

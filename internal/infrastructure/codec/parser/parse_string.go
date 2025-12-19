@@ -19,6 +19,15 @@ func (p *RespParser) parseString(args []string) (application.Command, error) {
 
 	case "SET":
 		return p.parseSet(args)
+
+	case "TYPE":
+		if len(args) != 2 {
+			return nil, fmt.Errorf("TYPE expects 1 argument")
+		}
+		return commandString.TypeCommand{
+			Key: args[1],
+		}, nil
+
 	}
 
 	return nil, fmt.Errorf("unknown string command")

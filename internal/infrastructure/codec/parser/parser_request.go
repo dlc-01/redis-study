@@ -32,7 +32,7 @@ func (p *RespParser) ReadCommand() (application.Command, error) {
 	case "PING", "ECHO":
 		return p.parseBasic(args)
 
-	case "SET", "GET":
+	case "SET", "GET", "TYPE":
 		return p.parseString(args)
 
 	case "LPUSH", "RPUSH", "LPOP", "LRANGE", "LLEN", "BLPOP":
