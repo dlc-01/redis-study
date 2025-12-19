@@ -1,4 +1,4 @@
-package codec
+package parser
 
 import (
 	"bufio"
@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/codecrafters-io/redis-starter-go/internal/application"
+	string2 "github.com/codecrafters-io/redis-starter-go/internal/application/commands/string"
 )
 
 type RespParser struct {
@@ -23,98 +24,19 @@ func (p *RespParser) ReadCommand() (application.Command, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	if len(args) == 0 {
 		return nil, fmt.Errorf("empty command")
 	}
 
 	switch strings.ToUpper(args[0]) {
+	case "PING", "ECHO":
+		return p.parseBasic(args)
 
-	case "PING":
-		return application.PingCommand{}, nil
+	case "SET", "GET":
+		return p.parseString(args)
 
-	case "ECHO":
-		if len(args) != 2 {
-			return nil, fmt.Errorf("ECHO expects 1 argument")
-		}
-		return application.EchoCommand{Value: args[1]}, nil
-
-	case "SET":
-		return p.parseSet(args)
-
-	case "GET":
-		if len(args) != 2 {
-			return nil, fmt.Errorf("GET expects 1 argument")
-		}
-		return application.GetCommand{
-			Key: args[1],
-		}, nil
-
-	case "RPUSH":
-		if len(args) < 3 {
-			return nil, fmt.Errorf("RPUSH expects at least 2 arguments")
-		}
-		return application.RPushCommand{
-			Key:    args[1],
-			Values: args[2:],
-		}, nil
-	case "LPUSH":
-		if len(args) < 3 {
-			return nil, fmt.Errorf("LPUSH expects at least 2 arguments")
-		}
-		return application.LPushCommand{
-			Key:    args[1],
-			Values: args[2:],
-		}, nil
-	case "LRANGE":
-		if len(args) != 4 {
-			return nil, fmt.Errorf("LRANGE expects 3 arguments")
-		}
-
-		start, err := strconv.Atoi(args[2])
-		if err != nil {
-			return nil, fmt.Errorf("invalid start index")
-		}
-
-		stop, err := strconv.Atoi(args[3])
-		if err != nil {
-			return nil, fmt.Errorf("invalid stop index")
-		}
-
-		return application.LRangeCommand{
-			Key:   args[1],
-			Start: start,
-			Stop:  stop,
-		}, nil
-
-	case "LLEN":
-		if len(args) != 2 {
-			return nil, fmt.Errorf("LLEN expects 1 argument")
-		}
-		return application.LLenCommand{
-			Key: args[1],
-		}, nil
-	case "LPOP":
-		if len(args) == 2 {
-			return application.LPopCommand{
-				Key:   args[1],
-				Count: nil,
-			}, nil
-		}
-
-		if len(args) == 3 {
-			n, err := strconv.Atoi(args[2])
-			if err != nil || n < 0 {
-				return nil, fmt.Errorf("invalid count")
-			}
-			return application.LPopCommand{
-				Key:   args[1],
-				Count: &n,
-			}, nil
-		}
-
-		return nil, fmt.Errorf("LPOP expects 1 or 2 arguments")
-
+	case "LPUSH", "RPUSH", "LPOP", "LRANGE", "LLEN", "BLPOP":
+		return p.parseList(args)
 	}
 
 	return nil, fmt.Errorf("unknown command")
@@ -238,7 +160,7 @@ func (p *RespParser) parseSet(args []string) (application.Command, error) {
 		}
 	}
 
-	return application.SetCommand{
+	return string2.SetCommand{
 		Key:   key,
 		Value: value,
 		PX:    px,

@@ -1,4 +1,4 @@
-package application
+package commands
 
 type EchoCommand struct {
 	Value string

@@ -6,6 +6,7 @@ import (
 
 	"github.com/codecrafters-io/redis-starter-go/internal/application"
 	"github.com/codecrafters-io/redis-starter-go/internal/infrastructure/codec"
+	"github.com/codecrafters-io/redis-starter-go/internal/infrastructure/codec/parser"
 	netinfra "github.com/codecrafters-io/redis-starter-go/internal/infrastructure/net"
 	"github.com/codecrafters-io/redis-starter-go/internal/infrastructure/storage"
 	"github.com/codecrafters-io/redis-starter-go/internal/ports"
@@ -23,9 +24,9 @@ func main() {
 		reader := bufio.NewReader(conn)
 
 		for {
-			parser := codec.NewRespParser(reader)
+			parserCommand := parser.NewRespParser(reader)
 
-			cmd, err := parser.ReadCommand()
+			cmd, err := parserCommand.ReadCommand()
 			if err != nil {
 				fmt.Println(err)
 				return

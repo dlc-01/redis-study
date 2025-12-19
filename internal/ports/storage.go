@@ -17,4 +17,7 @@ type Storage interface {
 	RPop(key string) (string, bool, error)
 	LRange(key string, start, stop int) ([]string, error)
 	LLen(key string) (int, error)
+
+	BLPop(key string) (string, bool, error)
+	BLPopWithTimeout(key string, timeout time.Duration) (string, bool, error)
 }

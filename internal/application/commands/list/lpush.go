@@ -1,4 +1,4 @@
-package application
+package list
 
 type LPushCommand struct {
 	Key    string

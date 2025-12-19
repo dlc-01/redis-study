@@ -36,6 +36,8 @@ func (b BuilderResponse) Build(resp response.Response) ([]byte, error) {
 			buf.Write(raw)
 		}
 		return []byte(buf.String()), nil
+	case response.NullArray:
+		return []byte("*-1\r\n"), nil
 
 	}
 
