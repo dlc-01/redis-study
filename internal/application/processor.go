@@ -51,7 +51,20 @@ func (p *Processor) Handle(cmd Command) (response.Response, error) {
 		}
 
 		return response.Integer{Value: n}, nil
-		
+	case LPushCommand:
+		if len(c.Values) == 0 {
+			return response.ErrorString{
+				Message: "ERR wrong number of arguments for 'lpush' command",
+			}, nil
+		}
+
+		n, err := p.storage.LPush(c.Key, c.Values...)
+		if err != nil {
+			return response.ErrorString{Message: err.Error()}, nil
+		}
+
+		return response.Integer{Value: n}, nil
+
 	case LRangeCommand:
 		values, err := p.storage.LRange(c.Key, c.Start, c.Stop)
 		if err != nil {

@@ -58,6 +58,14 @@ func (p *RespParser) ReadCommand() (application.Command, error) {
 			Key:    args[1],
 			Values: args[2:],
 		}, nil
+	case "LPUSH":
+		if len(args) < 3 {
+			return nil, fmt.Errorf("LPUSH expects at least 2 arguments")
+		}
+		return application.LPushCommand{
+			Key:    args[1],
+			Values: args[2:],
+		}, nil
 	case "LRANGE":
 		if len(args) != 4 {
 			return nil, fmt.Errorf("LRANGE expects 3 arguments")

@@ -118,20 +118,23 @@ func (s *MemoryStorage) LPush(key string, values ...string) (int, error) {
 		}
 	}
 
+	for i, j := 0, len(values)-1; i < j; i, j = i+1, j-1 {
+		values[i], values[j] = values[j], values[i]
+	}
+
 	if !ok {
-		list := append([]string{}, values...)
 		s.data[key] = item{
 			kind: typeList,
-			list: list,
+			list: append([]string{}, values...),
 		}
-		return len(list), nil
+		return len(values), nil
 	}
 
 	if it.kind != typeList {
 		return 0, ErrWrongType
 	}
 
-	it.list = append(append([]string{}, values...), it.list...)
+	it.list = append(values, it.list...)
 	s.data[key] = it
 
 	return len(it.list), nil
