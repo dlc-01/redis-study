@@ -49,6 +49,15 @@ func (p *RespParser) ReadCommand() (application.Command, error) {
 		return application.GetCommand{
 			Key: args[1],
 		}, nil
+		
+	case "RPUSH":
+		if len(args) < 3 {
+			return nil, fmt.Errorf("RPUSH expects at least 2 arguments")
+		}
+		return application.RPushCommand{
+			Key:    args[1],
+			Values: args[2:],
+		}, nil
 	}
 
 	return nil, fmt.Errorf("unknown command")

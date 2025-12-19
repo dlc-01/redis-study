@@ -37,6 +37,20 @@ func (p *Processor) Handle(cmd Command) (response.Response, error) {
 			return response.BulkString{Value: nil}, nil
 		}
 		return response.BulkString{Value: &val}, nil
+
+	case RPushCommand:
+		if len(c.Values) == 0 {
+			return response.ErrorString{
+				Message: "ERR wrong number of arguments for 'rpush' command",
+			}, nil
+		}
+
+		n, err := p.storage.RPush(c.Key, c.Values...)
+		if err != nil {
+			return response.ErrorString{Message: err.Error()}, nil
+		}
+
+		return response.Integer{Value: n}, nil
 	}
 
 	return response.ErrorString{Message: "ERR unknown command"}, nil

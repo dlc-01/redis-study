@@ -9,4 +9,9 @@ type SetOptions struct {
 type Storage interface {
 	Set(key string, value string, opts SetOptions) error
 	Get(key string) (value string, ok bool, err error)
+
+	RPush(key string, values ...string) (int, error)
+	LPush(key string, values ...string) (int, error)
+	LPop(key string) (string, bool, error)
+	RPop(key string) (string, bool, error)
 }

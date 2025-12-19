@@ -17,3 +17,9 @@ type ErrorString struct {
 }
 
 func (ErrorString) isResponse() {}
+
+type Integer struct {
+	Value int
+}
+
+func (Integer) isResponse() {}
