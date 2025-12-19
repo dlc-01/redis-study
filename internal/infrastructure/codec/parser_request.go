@@ -87,6 +87,14 @@ func (p *RespParser) ReadCommand() (application.Command, error) {
 			Stop:  stop,
 		}, nil
 
+	case "LLEN":
+		if len(args) != 2 {
+			return nil, fmt.Errorf("LLEN expects 1 argument")
+		}
+		return application.LLenCommand{
+			Key: args[1],
+		}, nil
+
 	}
 
 	return nil, fmt.Errorf("unknown command")

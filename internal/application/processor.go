@@ -78,6 +78,12 @@ func (p *Processor) Handle(cmd Command) (response.Response, error) {
 		}
 
 		return response.Array{Values: resp}, nil
+	case LLenCommand:
+		n, err := p.storage.LLen(c.Key)
+		if err != nil {
+			return response.ErrorString{Message: err.Error()}, nil
+		}
+		return response.Integer{Value: n}, nil
 
 	}
 
