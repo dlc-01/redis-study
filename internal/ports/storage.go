@@ -14,4 +14,5 @@ type Storage interface {
 	LPush(key string, values ...string) (int, error)
 	LPop(key string) (string, bool, error)
 	RPop(key string) (string, bool, error)
+	LRange(key string, start, stop int) ([]string, error)
 }

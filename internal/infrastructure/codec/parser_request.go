@@ -49,7 +49,7 @@ func (p *RespParser) ReadCommand() (application.Command, error) {
 		return application.GetCommand{
 			Key: args[1],
 		}, nil
-		
+
 	case "RPUSH":
 		if len(args) < 3 {
 			return nil, fmt.Errorf("RPUSH expects at least 2 arguments")
@@ -58,6 +58,27 @@ func (p *RespParser) ReadCommand() (application.Command, error) {
 			Key:    args[1],
 			Values: args[2:],
 		}, nil
+	case "LRANGE":
+		if len(args) != 4 {
+			return nil, fmt.Errorf("LRANGE expects 3 arguments")
+		}
+
+		start, err := strconv.Atoi(args[2])
+		if err != nil {
+			return nil, fmt.Errorf("invalid start index")
+		}
+
+		stop, err := strconv.Atoi(args[3])
+		if err != nil {
+			return nil, fmt.Errorf("invalid stop index")
+		}
+
+		return application.LRangeCommand{
+			Key:   args[1],
+			Start: start,
+			Stop:  stop,
+		}, nil
+
 	}
 
 	return nil, fmt.Errorf("unknown command")

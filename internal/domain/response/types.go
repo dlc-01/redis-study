@@ -23,3 +23,9 @@ type Integer struct {
 }
 
 func (Integer) isResponse() {}
+
+type Array struct {
+	Values []Response
+}
+
+func (Array) isResponse() {}

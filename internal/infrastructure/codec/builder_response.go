@@ -2,6 +2,7 @@ package codec
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/codecrafters-io/redis-starter-go/internal/domain/response"
 )
@@ -24,6 +25,17 @@ func (b BuilderResponse) Build(resp response.Response) ([]byte, error) {
 		return []byte(fmt.Sprintf("-%s\r\n", r.Message)), nil
 	case response.Integer:
 		return []byte(fmt.Sprintf(":%d\r\n", r.Value)), nil
+	case response.Array:
+		var buf strings.Builder
+		buf.WriteString(fmt.Sprintf("*%d\r\n", len(r.Values)))
+		for _, v := range r.Values {
+			raw, err := b.Build(v)
+			if err != nil {
+				return nil, err
+			}
+			buf.Write(raw)
+		}
+		return []byte(buf.String()), nil
 
 	}
 
