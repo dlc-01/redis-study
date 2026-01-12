@@ -11,6 +11,13 @@ import (
 type rangeID = streamID
 
 func parseRangeID(s string, isStart bool) (streamID, error) {
+	if s == "-" {
+		return streamID{Time: 0, Seq: 0}, nil
+	}
+	if s == "+" {
+		return streamID{Time: math.MaxInt64, Seq: math.MaxInt64}, nil
+	}
+
 	if strings.Contains(s, "-") {
 		spec, err := parseIDSpec(s)
 		if err != nil {
