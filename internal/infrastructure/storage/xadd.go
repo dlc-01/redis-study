@@ -64,6 +64,17 @@ func (s *MemoryStorage) XAdd(key string, id string, fields map[string]string) (s
 			}
 			newID = streamID{Time: t, Seq: start}
 		}
+
+	case specAutoID:
+		t := time.Now().UnixMilli()
+
+		seq := int64(0)
+		if lastID != nil && lastID.Time == t {
+			seq = lastID.Seq + 1
+		}
+
+		newID = streamID{Time: t, Seq: seq}
+
 	}
 
 	if newID.Time == 0 && newID.Seq == 0 {

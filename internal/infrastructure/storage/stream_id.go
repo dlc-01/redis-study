@@ -16,6 +16,7 @@ type idSpecKind int
 const (
 	specExplicit idSpecKind = iota
 	specAutoSeq
+	specAutoID
 )
 
 type idSpec struct {
@@ -25,6 +26,10 @@ type idSpec struct {
 }
 
 func parseIDSpec(s string) (idSpec, error) {
+	if s == "*" {
+		return idSpec{kind: specAutoID}, nil
+	}
+
 	parts := strings.Split(s, "-")
 	if len(parts) != 2 {
 		return idSpec{}, fmt.Errorf("ERR Invalid stream ID specified as stream command argument")
