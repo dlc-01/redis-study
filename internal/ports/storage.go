@@ -1,6 +1,10 @@
 package ports
 
-import "time"
+import (
+	"time"
+
+	"github.com/codecrafters-io/redis-starter-go/internal/domain/value"
+)
 
 type SetOptions struct {
 	PX *time.Duration
@@ -20,5 +24,6 @@ type Storage interface {
 	BLPop(key string) (string, bool, error)
 	BLPopWithTimeout(key string, timeout time.Duration) (string, bool, error)
 	Type(key string) (string, error)
-	XAdd(key string, id string, fields map[string]string) (string, error)
+	XAdd(key string, id string, values []value.StreamKV) (string, error)
+	XRange(key string, start, end string) ([]value.StreamEntry, error)
 }

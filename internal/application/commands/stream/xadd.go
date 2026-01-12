@@ -1,11 +1,11 @@
 package stream
 
+import "github.com/codecrafters-io/redis-starter-go/internal/domain/value"
+
 type XAddCommand struct {
 	Key    string
 	ID     string
-	Fields map[string]string
+	Values []value.StreamKV
 }
 
-func (XAddCommand) Name() string {
-	return "XADD"
-}
+func (XAddCommand) Name() string { return "XADD" }

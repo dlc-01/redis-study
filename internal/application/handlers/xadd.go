@@ -7,7 +7,7 @@ import (
 )
 
 func HandleXAdd(storage ports.Storage, c stream.XAddCommand) (response.Response, error) {
-	id, err := storage.XAdd(c.Key, c.ID, c.Fields)
+	id, err := storage.XAdd(c.Key, c.ID, c.Values)
 	if err != nil {
 		return nil, err
 	}

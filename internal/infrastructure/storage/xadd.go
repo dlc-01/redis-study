@@ -7,7 +7,7 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/internal/domain/value"
 )
 
-func (s *MemoryStorage) XAdd(key string, id string, fields map[string]string) (string, error) {
+func (s *MemoryStorage) XAdd(key string, id string, values []value.StreamKV) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -74,7 +74,6 @@ func (s *MemoryStorage) XAdd(key string, id string, fields map[string]string) (s
 		}
 
 		newID = streamID{Time: t, Seq: seq}
-
 	}
 
 	if newID.Time == 0 && newID.Seq == 0 {
@@ -92,7 +91,7 @@ func (s *MemoryStorage) XAdd(key string, id string, fields map[string]string) (s
 
 	stream.V = append(stream.V, value.StreamEntry{
 		ID:     idStr,
-		Fields: fields,
+		Values: values,
 	})
 
 	s.setRecordLocked(key, stream, expiresAtPtr)

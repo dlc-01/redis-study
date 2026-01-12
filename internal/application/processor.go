@@ -114,6 +114,14 @@ func NewProcessor(storage ports.Storage) *Processor {
 		return handlers.HandleXAdd(storage, c)
 	})
 
+	r.Register("XRANGE", func(cmd Command) (response.Response, error) {
+		c, err := require[stream.XRangeCommand](cmd)
+		if err != nil {
+			return nil, err
+		}
+		return handlers.HandleXRange(storage, c)
+	})
+
 	return &Processor{router: r}
 }
 
