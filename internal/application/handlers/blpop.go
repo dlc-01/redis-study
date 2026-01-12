@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"github.com/codecrafters-io/redis-starter-go/internal/application/commands/list"
+	"github.com/codecrafters-io/redis-starter-go/internal/application/errors"
 	"github.com/codecrafters-io/redis-starter-go/internal/domain/response"
 	"github.com/codecrafters-io/redis-starter-go/internal/ports"
 )
@@ -20,7 +21,7 @@ func HandleBLPop(storage ports.Storage, c list.BLPopCommand) (response.Response,
 	}
 
 	if err != nil {
-		return response.ErrorString{Message: err.Error()}, nil
+		return errors.ToResponse(err), nil
 	}
 
 	if !ok {

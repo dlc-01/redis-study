@@ -1,22 +1,36 @@
 package storage
 
 import (
-	"errors"
 	"time"
+
+	"github.com/codecrafters-io/redis-starter-go/internal/domain/value"
 )
 
-var ErrWrongType = errors.New(
-	"WRONGTYPE Operation against a key holding the wrong kind of value",
-)
-
-func (s *MemoryStorage) isExpired(it item) bool {
-	return it.expiresAt != nil && time.Now().After(*it.expiresAt)
+func (s *MemoryStorage) isExpired(r record) bool {
+	return r.expiresAt != nil && time.Now().After(*r.expiresAt)
 }
 
-func (s *MemoryStorage) cleanupIfExpired(key string, it item) bool {
-	if s.isExpired(it) {
+func (s *MemoryStorage) cleanupIfExpired(key string, r record) bool {
+	if s.isExpired(r) {
 		delete(s.data, key)
 		return true
 	}
 	return false
+}
+func (s *MemoryStorage) getRecordLocked(key string) (record, bool) {
+	r, ok := s.data[key]
+	if !ok {
+		return record{}, false
+	}
+
+	if r.expiresAt != nil && time.Now().After(*r.expiresAt) {
+		delete(s.data, key)
+		return record{}, false
+	}
+
+	return r, true
+}
+
+func (s *MemoryStorage) setRecordLocked(key string, v value.Value, expiresAt *time.Time) {
+	s.data[key] = record{v: v, expiresAt: expiresAt}
 }

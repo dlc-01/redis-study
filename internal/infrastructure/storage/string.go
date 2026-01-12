@@ -3,24 +3,22 @@ package storage
 import (
 	"time"
 
+	"github.com/codecrafters-io/redis-starter-go/internal/domain/rerrors"
+	"github.com/codecrafters-io/redis-starter-go/internal/domain/value"
 	"github.com/codecrafters-io/redis-starter-go/internal/ports"
 )
 
-func (s *MemoryStorage) Set(key, value string, opts ports.SetOptions) error {
+func (s *MemoryStorage) Set(key string, v string, opts ports.SetOptions) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	var expiresAt *time.Time
+	var exp *time.Time
 	if opts.PX != nil {
 		t := time.Now().Add(*opts.PX)
-		expiresAt = &t
+		exp = &t
 	}
 
-	s.data[key] = item{
-		kind:      typeString,
-		value:     value,
-		expiresAt: expiresAt,
-	}
+	s.setRecordLocked(key, value.String{V: v}, exp)
 	return nil
 }
 
@@ -28,14 +26,15 @@ func (s *MemoryStorage) Get(key string) (string, bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	it, ok := s.data[key]
-	if !ok || s.cleanupIfExpired(key, it) {
+	r, ok := s.getRecordLocked(key)
+	if !ok {
 		return "", false, nil
 	}
 
-	if it.kind != typeString {
-		return "", false, ErrWrongType
+	str, ok := r.v.(value.String)
+	if !ok {
+		return "", false, rerrors.ErrWrongType
 	}
 
-	return it.value, true, nil
+	return str.V, true, nil
 }

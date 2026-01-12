@@ -1,23 +1,26 @@
 package storage
 
+import (
+	"github.com/codecrafters-io/redis-starter-go/internal/domain/rerrors"
+	"github.com/codecrafters-io/redis-starter-go/internal/domain/value"
+)
+
 func (s *MemoryStorage) RPush(key string, values ...string) (int, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	it, ok := s.data[key]
-	if ok && s.cleanupIfExpired(key, it) {
-		ok = false
-	}
+	r, ok := s.getRecordLocked(key)
+	var lst value.List
 
 	if !ok {
-		it = item{
-			kind: typeList,
-			list: []string{},
+		lst = value.List{V: []string{}}
+		r = record{v: lst, expiresAt: nil}
+	} else {
+		var isList bool
+		lst, isList = r.v.(value.List)
+		if !isList {
+			return 0, rerrors.ErrWrongType
 		}
-	}
-
-	if it.kind != typeList {
-		return 0, ErrWrongType
 	}
 
 	if ws := s.waiters[key]; len(ws) > 0 {
@@ -28,40 +31,38 @@ func (s *MemoryStorage) RPush(key string, values ...string) (int, error) {
 		waiter.ch <- val
 
 		if len(values) > 1 {
-			it.list = append(it.list, values[1:]...)
-			s.data[key] = it
+			lst.V = append(lst.V, values[1:]...)
+			s.setRecordLocked(key, lst, r.expiresAt)
 		}
 
 		return 1, nil
 	}
 
-	it.list = append(it.list, values...)
-	s.data[key] = it
-	return len(it.list), nil
+	lst.V = append(lst.V, values...)
+	s.setRecordLocked(key, lst, r.expiresAt)
+	return len(lst.V), nil
 }
 
 func (s *MemoryStorage) LPush(key string, values ...string) (int, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	it, ok := s.data[key]
-	if ok && s.cleanupIfExpired(key, it) {
-		ok = false
-	}
+	r, ok := s.getRecordLocked(key)
+	var lst value.List
 
 	for i, j := 0, len(values)-1; i < j; i, j = i+1, j-1 {
 		values[i], values[j] = values[j], values[i]
 	}
 
 	if !ok {
-		it = item{
-			kind: typeList,
-			list: []string{},
+		lst = value.List{V: []string{}}
+		r = record{v: lst, expiresAt: nil}
+	} else {
+		var isList bool
+		lst, isList = r.v.(value.List)
+		if !isList {
+			return 0, rerrors.ErrWrongType
 		}
-	}
-
-	if it.kind != typeList {
-		return 0, ErrWrongType
 	}
 
 	if ws := s.waiters[key]; len(ws) > 0 {
@@ -72,14 +73,14 @@ func (s *MemoryStorage) LPush(key string, values ...string) (int, error) {
 		waiter.ch <- val
 
 		if len(values) > 1 {
-			it.list = append(values[1:], it.list...)
-			s.data[key] = it
+			lst.V = append(values[1:], lst.V...)
+			s.setRecordLocked(key, lst, r.expiresAt)
 		}
 
 		return 1, nil
 	}
 
-	it.list = append(values, it.list...)
-	s.data[key] = it
-	return len(it.list), nil
+	lst.V = append(values, lst.V...)
+	s.setRecordLocked(key, lst, r.expiresAt)
+	return len(lst.V), nil
 }

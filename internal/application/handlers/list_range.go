@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"github.com/codecrafters-io/redis-starter-go/internal/application/commands/list"
+	"github.com/codecrafters-io/redis-starter-go/internal/application/errors"
 	"github.com/codecrafters-io/redis-starter-go/internal/domain/response"
 	"github.com/codecrafters-io/redis-starter-go/internal/ports"
 )
@@ -9,7 +10,7 @@ import (
 func HandleLRange(storage ports.Storage, c list.LRangeCommand) (response.Response, error) {
 	values, err := storage.LRange(c.Key, c.Start, c.Stop)
 	if err != nil {
-		return response.ErrorString{Message: "ERR internal error"}, nil
+		return errors.ToResponse(err), nil
 	}
 
 	resp := make([]response.Response, 0, len(values))

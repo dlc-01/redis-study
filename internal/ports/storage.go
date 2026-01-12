@@ -20,4 +20,5 @@ type Storage interface {
 	BLPop(key string) (string, bool, error)
 	BLPopWithTimeout(key string, timeout time.Duration) (string, bool, error)
 	Type(key string) (string, error)
+	XAdd(key string, id string, fields map[string]string) (string, error)
 }

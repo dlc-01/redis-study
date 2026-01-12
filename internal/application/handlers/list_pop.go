@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"github.com/codecrafters-io/redis-starter-go/internal/application/commands/list"
+	"github.com/codecrafters-io/redis-starter-go/internal/application/errors"
 	"github.com/codecrafters-io/redis-starter-go/internal/domain/response"
 	"github.com/codecrafters-io/redis-starter-go/internal/ports"
 )
@@ -10,7 +11,7 @@ func HandleLPop(storage ports.Storage, c list.LPopCommand) (response.Response, e
 	if c.Count == nil {
 		v, ok, err := storage.LPop(c.Key)
 		if err != nil {
-			return response.ErrorString{Message: err.Error()}, nil
+			return errors.ToResponse(err), nil
 		}
 		if !ok {
 			return response.BulkString{Value: nil}, nil
@@ -20,7 +21,7 @@ func HandleLPop(storage ports.Storage, c list.LPopCommand) (response.Response, e
 
 	values, err := storage.LPopN(c.Key, *c.Count)
 	if err != nil {
-		return response.ErrorString{Message: err.Error()}, nil
+		return errors.ToResponse(err), nil
 	}
 
 	resp := make([]response.Response, 0, len(values))

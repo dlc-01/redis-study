@@ -1,17 +1,30 @@
 package storage
 
-import "time"
+import (
+	"time"
+
+	"github.com/codecrafters-io/redis-starter-go/internal/domain/rerrors"
+	"github.com/codecrafters-io/redis-starter-go/internal/domain/value"
+)
 
 func (s *MemoryStorage) BLPop(key string) (string, bool, error) {
 	s.mu.Lock()
 
-	it, ok := s.data[key]
-	if ok && it.kind == typeList && len(it.list) > 0 {
-		v := it.list[0]
-		it.list = it.list[1:]
-		s.data[key] = it
-		s.mu.Unlock()
-		return v, true, nil
+	r, ok := s.getRecordLocked(key)
+	if ok {
+		lst, isList := r.v.(value.List)
+		if !isList {
+			s.mu.Unlock()
+			return "", false, rerrors.ErrWrongType
+		}
+
+		if len(lst.V) > 0 {
+			v := lst.V[0]
+			lst.V = lst.V[1:]
+			s.setRecordLocked(key, lst, r.expiresAt)
+			s.mu.Unlock()
+			return v, true, nil
+		}
 	}
 
 	waiter := &blpopWaiter{ch: make(chan string, 1)}
@@ -29,13 +42,21 @@ func (s *MemoryStorage) BLPopWithTimeout(
 
 	s.mu.Lock()
 
-	it, ok := s.data[key]
-	if ok && it.kind == typeList && len(it.list) > 0 {
-		v := it.list[0]
-		it.list = it.list[1:]
-		s.data[key] = it
-		s.mu.Unlock()
-		return v, true, nil
+	r, ok := s.getRecordLocked(key)
+	if ok {
+		lst, isList := r.v.(value.List)
+		if !isList {
+			s.mu.Unlock()
+			return "", false, rerrors.ErrWrongType
+		}
+
+		if len(lst.V) > 0 {
+			v := lst.V[0]
+			lst.V = lst.V[1:]
+			s.setRecordLocked(key, lst, r.expiresAt)
+			s.mu.Unlock()
+			return v, true, nil
+		}
 	}
 
 	waiter := &blpopWaiter{ch: make(chan string, 1)}

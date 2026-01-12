@@ -1,15 +1,25 @@
 package storage
 
+import (
+	"github.com/codecrafters-io/redis-starter-go/internal/domain/rerrors"
+	"github.com/codecrafters-io/redis-starter-go/internal/domain/value"
+)
+
 func (s *MemoryStorage) LRange(key string, start, stop int) ([]string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	it, ok := s.data[key]
-	if !ok || it.kind != typeList {
+	r, ok := s.getRecordLocked(key)
+	if !ok {
 		return []string{}, nil
 	}
 
-	n := len(it.list)
+	lst, ok := r.v.(value.List)
+	if !ok {
+		return []string{}, rerrors.ErrWrongType
+	}
+
+	n := len(lst.V)
 	if n == 0 {
 		return []string{}, nil
 	}
@@ -32,7 +42,7 @@ func (s *MemoryStorage) LRange(key string, start, stop int) ([]string, error) {
 		return []string{}, nil
 	}
 
-	result := it.list[start : stop+1]
+	result := lst.V[start : stop+1]
 
 	out := make([]string, len(result))
 	copy(out, result)
