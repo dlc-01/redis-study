@@ -1,33 +1,113 @@
-[![progress-banner](https://backend.codecrafters.io/progress/redis/24cb653a-70e2-4174-b6b4-7c15b9cf09a8)](https://app.codecrafters.io/users/codecrafters-bot?r=2qF)
+Redis-compatible Server (Go)
 
-This is a starting point for Go solutions to the
-["Build Your Own Redis" Challenge](https://codecrafters.io/challenges/redis).
+A Redis-compatible server implemented in Go, built as a learning project focused on infrastructure-level backend development, concurrency, and protocol design.
 
-In this challenge, you'll build a toy Redis clone that's capable of handling
-basic commands like `PING`, `SET` and `GET`. Along the way we'll learn about
-event loops, the Redis protocol and more.
+The project implements a subset of Redis features with emphasis on Streams and blocking reads.
 
-**Note**: If you're viewing this repo on GitHub, head over to
-[codecrafters.io](https://codecrafters.io) to try the challenge.
+⚠️ Work in progress — new commands and improvements are added incrementally.
 
-# Passing the first stage
+⸻
 
-The entry point for your Redis implementation is in `app/main.go`. Study and
-uncomment the relevant code, and push your changes to pass the first stage:
+Features
 
-```sh
-git commit -am "pass 1st stage" # any msg
-git push origin master
-```
+Core
+	•	RESP2 protocol support
+	•	In-memory storage
+	•	Concurrent access with proper synchronization
+	•	Expiration (TTL) support
 
-That's all!
+Implemented Redis Commands
 
-# Stage 2 & beyond
+Strings
+	•	GET
+	•	SET (with PX)
+	•	TYPE
 
-Note: This section is for stages 2 and beyond.
+Lists
+	•	LPUSH
+	•	RPUSH
+	•	LPOP
+	•	LLEN
+	•	LRANGE
+	•	BLPOP
 
-1. Ensure you have `go (1.25)` installed locally
-1. Run `./your_program.sh` to run your Redis server, which is implemented in
-   `app/main.go`.
-1. Commit your changes and run `git push origin master` to submit your solution
-   to CodeCrafters. Test output will be streamed to your terminal.
+Streams
+	•	XADD
+	•	XRANGE
+	•	XREAD
+	•	Multiple streams
+	•	Blocking reads (BLOCK <ms>)
+	•	Infinite blocking (BLOCK 0)
+	•	$ semantics (read only new entries)
+
+⸻
+
+Streams Implementation Details
+	•	Stream entries are stored sorted by ID
+	•	Each stream maintains an indexed LastID to avoid reparsing
+	•	Efficient range and read operations using binary search
+	•	Blocking XREAD implemented via per-stream waiters
+	•	Correct Redis semantics:
+	•	XREAD is exclusive (> comparison)
+	•	$ resolves once at subscription time
+	•	Blocking returns null array only on timeout
+
+⸻
+
+Architecture Overview
+
+The project follows a clean layered architecture:
+
+parser        → RESP decoding, command parsing
+application  → command definitions & handlers
+domain       → core types (Stream, StreamID, errors)
+storage      → in-memory engine, concurrency & blocking logic
+
+Key Design Choices
+	•	Stream ID parsing isolated in streamidcodec
+	•	Domain-level streamid.ID used instead of raw strings
+	•	Storage layer owns concurrency and blocking semantics
+	•	Handlers are thin and protocol-focused
+
+⸻
+
+Running the Server
+
+go run ./cmd/server
+
+Then connect using redis-cli:
+
+redis-cli -p 6379
+
+
+⸻
+
+Example
+
+XADD mystream * temperature 25
+XREAD BLOCK 0 STREAMS mystream $
+
+
+⸻
+
+Goals of the Project
+	•	Understand Redis internals (Streams, blocking, IDs)
+	•	Practice concurrent system design in Go
+	•	Build infrastructure-grade abstractions
+	•	Prepare for backend / infrastructure interviews
+
+⸻
+
+Roadmap
+	•	Persistence (AOF / RDB-like)
+	•	Consumer groups (XGROUP, XREADGROUP)
+	•	Memory optimizations
+	•	Better error compatibility with Redis
+	•	Benchmarks
+
+⸻
+
+Disclaimer
+
+This is not a production-ready Redis replacement.
+It is a learning-oriented implementation designed to explore how Redis works internally.
