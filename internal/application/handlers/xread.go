@@ -37,7 +37,7 @@ func HandleXRead(storage ports.Storage, c stream.XReadCommand) (response.Respons
 
 		entriesResp := make([]response.Response, 0, len(entries))
 		for _, e := range entries {
-			id := e.ID
+			id := e.IDRaw
 
 			kvs := make([]response.Response, 0, len(e.Values)*2)
 			for _, kv := range e.Values {

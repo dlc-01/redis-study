@@ -1,7 +1,10 @@
 package value
 
+import "github.com/codecrafters-io/redis-starter-go/internal/domain/streamid"
+
 type Stream struct {
-	V []StreamEntry
+	V      []StreamEntry
+	LastID streamid.ID
 }
 
 func (Stream) Type() Type { return TypeStream }
@@ -12,6 +15,7 @@ type StreamKV struct {
 }
 
 type StreamEntry struct {
-	ID     string
+	IDRaw  string
+	ID     streamid.ID
 	Values []StreamKV
 }

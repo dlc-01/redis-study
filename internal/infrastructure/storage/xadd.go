@@ -36,16 +36,7 @@ func (s *MemoryStorage) XAdd(key string, id string, values []value.StreamKV) (st
 		st = curr
 
 		if n := len(st.V); n > 0 {
-			lastEntryID := st.V[n-1].ID
-			lastSpec, err := streamidcodec.ParseSpec(lastEntryID)
-			if err != nil {
-				return "", err
-			}
-			if lastSpec.Kind != streamidcodec.SpecExplicit {
-				return "", rerrors.ErrInvalidStreamID
-			}
-
-			tmp := streamid.ID{Time: lastSpec.Time, Seq: lastSpec.Seq}
+			tmp := st.V[n-1].ID
 			last = &tmp
 		}
 	} else {
@@ -102,9 +93,12 @@ func (s *MemoryStorage) XAdd(key string, id string, values []value.StreamKV) (st
 	idStr := newID.String()
 
 	st.V = append(st.V, value.StreamEntry{
-		ID:     idStr,
+		IDRaw:  idStr,
+		ID:     newID,
 		Values: values,
 	})
+
+	st.LastID = newID
 
 	s.setRecordLocked(key, st, expiresAtPtr)
 

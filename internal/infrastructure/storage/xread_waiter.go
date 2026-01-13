@@ -2,6 +2,7 @@ package storage
 
 import (
 	"github.com/codecrafters-io/redis-starter-go/internal/application/streamidcodec"
+	"github.com/codecrafters-io/redis-starter-go/internal/domain/rerrors"
 	"github.com/codecrafters-io/redis-starter-go/internal/domain/streamid"
 	"github.com/codecrafters-io/redis-starter-go/internal/domain/value"
 )
@@ -79,5 +80,30 @@ func (s *MemoryStorage) xreadManyFromStartsLocked(keys []string, starts []stream
 			out[keys[i]] = entries
 		}
 	}
+	return out, nil
+}
+
+func (s *MemoryStorage) xreadOneLocked(key string, start streamid.ID) ([]value.StreamEntry, error) {
+	r, ok := s.getRecordLocked(key)
+	if !ok {
+		return []value.StreamEntry{}, nil
+	}
+
+	st, ok := r.v.(value.Stream)
+	if !ok {
+		return nil, rerrors.ErrWrongType
+	}
+
+	if len(st.V) == 0 {
+		return []value.StreamEntry{}, nil
+	}
+
+	i := lowerBoundGT(st.V, start)
+	if i >= len(st.V) {
+		return []value.StreamEntry{}, nil
+	}
+
+	out := make([]value.StreamEntry, len(st.V)-i)
+	copy(out, st.V[i:])
 	return out, nil
 }

@@ -31,27 +31,20 @@ func (s *MemoryStorage) XRange(key string, start string, end string) ([]value.St
 		return nil, err
 	}
 
+	if len(st.V) == 0 {
+		return []value.StreamEntry{}, nil
+	}
+
+	i := lowerBoundGE(st.V, startID)
+
 	out := make([]value.StreamEntry, 0)
-
-	for _, e := range st.V {
-		spec, err := streamidcodec.ParseSpec(e.ID)
-		if err != nil {
-			return nil, err
-		}
-		if spec.Kind != streamidcodec.SpecExplicit {
-			return nil, rerrors.ErrInvalidStreamID
-		}
-
-		eid := streamid.ID{Time: spec.Time, Seq: spec.Seq}
-
-		if streamid.Compare(eid, startID) < 0 {
-			continue
-		}
-		if streamid.Compare(eid, endID) > 0 {
+	for i < len(st.V) {
+		e := st.V[i]
+		if streamid.Compare(e.ID, endID) > 0 {
 			break
 		}
-
 		out = append(out, e)
+		i++
 	}
 
 	return out, nil

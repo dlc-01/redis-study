@@ -18,46 +18,7 @@ func (s *MemoryStorage) lastIDLocked(key string) (streamid.ID, bool, error) {
 	if !ok {
 		return streamid.ID{}, false, rerrors.ErrWrongType
 	}
-	if len(st.V) == 0 {
-		return streamid.ID{Time: 0, Seq: 0}, true, nil
-	}
-
-	spec, err := streamidcodec.ParseSpec(st.V[len(st.V)-1].ID)
-	if err != nil {
-		return streamid.ID{}, false, err
-	}
-	if spec.Kind != streamidcodec.SpecExplicit {
-		return streamid.ID{}, false, rerrors.ErrInvalidStreamID
-	}
-	return streamid.ID{Time: spec.Time, Seq: spec.Seq}, true, nil
-}
-
-func (s *MemoryStorage) xreadOneLocked(key string, start streamid.ID) ([]value.StreamEntry, error) {
-	r, ok := s.getRecordLocked(key)
-	if !ok {
-		return []value.StreamEntry{}, nil
-	}
-	st, ok := r.v.(value.Stream)
-	if !ok {
-		return nil, rerrors.ErrWrongType
-	}
-
-	out := make([]value.StreamEntry, 0)
-	for _, e := range st.V {
-		es, err := streamidcodec.ParseSpec(e.ID)
-		if err != nil {
-			return nil, err
-		}
-		if es.Kind != streamidcodec.SpecExplicit {
-			return nil, rerrors.ErrInvalidStreamID
-		}
-		eid := streamid.ID{Time: es.Time, Seq: es.Seq}
-		if streamid.Compare(eid, start) <= 0 {
-			continue
-		}
-		out = append(out, e)
-	}
-	return out, nil
+	return st.LastID, true, nil
 }
 
 func (s *MemoryStorage) XReadMany(keys []string, ids []string) (map[string][]value.StreamEntry, error) {
