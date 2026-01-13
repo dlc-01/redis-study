@@ -16,7 +16,6 @@ func (s *MemoryStorage) notifyStreamWaitersLocked(key string) {
 	if len(ws) == 0 {
 		return
 	}
-	delete(s.streamWaiters, key)
 
 	for _, w := range ws {
 		select {
@@ -25,7 +24,6 @@ func (s *MemoryStorage) notifyStreamWaitersLocked(key string) {
 		}
 	}
 }
-
 func (s *MemoryStorage) addStreamWaiterLocked(key string, w *xreadWaiter) {
 	s.streamWaiters[key] = append(s.streamWaiters[key], w)
 }
@@ -71,6 +69,7 @@ func (s *MemoryStorage) computeXReadStartsLocked(keys []string, ids []string) ([
 
 func (s *MemoryStorage) xreadManyFromStartsLocked(keys []string, starts []streamid.ID) (map[string][]value.StreamEntry, error) {
 	out := make(map[string][]value.StreamEntry)
+
 	for i := range keys {
 		entries, err := s.xreadOneLocked(keys[i], starts[i])
 		if err != nil {
@@ -80,27 +79,30 @@ func (s *MemoryStorage) xreadManyFromStartsLocked(keys []string, starts []stream
 			out[keys[i]] = entries
 		}
 	}
+
+	if len(out) == 0 {
+		return nil, nil
+	}
 	return out, nil
 }
 
 func (s *MemoryStorage) xreadOneLocked(key string, start streamid.ID) ([]value.StreamEntry, error) {
 	r, ok := s.getRecordLocked(key)
 	if !ok {
-		return []value.StreamEntry{}, nil
+		return nil, nil
 	}
 
 	st, ok := r.v.(value.Stream)
 	if !ok {
 		return nil, rerrors.ErrWrongType
 	}
-
 	if len(st.V) == 0 {
-		return []value.StreamEntry{}, nil
+		return nil, nil
 	}
 
 	i := lowerBoundGT(st.V, start)
 	if i >= len(st.V) {
-		return []value.StreamEntry{}, nil
+		return nil, nil
 	}
 
 	out := make([]value.StreamEntry, len(st.V)-i)

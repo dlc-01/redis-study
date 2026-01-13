@@ -3,7 +3,6 @@ package storage
 import (
 	"time"
 
-	"github.com/codecrafters-io/redis-starter-go/internal/application/streamidcodec"
 	"github.com/codecrafters-io/redis-starter-go/internal/domain/rerrors"
 	"github.com/codecrafters-io/redis-starter-go/internal/domain/streamid"
 	"github.com/codecrafters-io/redis-starter-go/internal/domain/value"
@@ -29,42 +28,26 @@ func (s *MemoryStorage) XReadMany(keys []string, ids []string) (map[string][]val
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	out := make(map[string][]value.StreamEntry, len(keys))
-
-	for i := range keys {
-		key := keys[i]
-		id := ids[i]
-
-		var start streamid.ID
-		if id == "$" {
-			last, _, err := s.lastIDLocked(key)
-			if err != nil {
-				return nil, err
-			}
-			start = last
-		} else {
-			parsed, err := streamidcodec.ParseRangeID(id, true)
-			if err != nil {
-				return nil, err
-			}
-			start = parsed
-		}
-
-		entries, err := s.xreadOneLocked(key, start)
-		if err != nil {
-			return nil, err
-		}
-		if len(entries) > 0 {
-			out[key] = entries
-		}
+	starts, err := s.computeXReadStartsLocked(keys, ids)
+	if err != nil {
+		return nil, err
 	}
 
-	return out, nil
+	return s.xreadManyFromStartsLocked(keys, starts)
 }
 
-func (s *MemoryStorage) XReadManyBlocked(keys []string, ids []string, timeout time.Duration) (map[string][]value.StreamEntry, error) {
+func (s *MemoryStorage) XReadManyBlocked(
+	keys []string,
+	ids []string,
+	timeout time.Duration,
+) (map[string][]value.StreamEntry, error) {
 	if len(keys) != len(ids) {
 		return nil, rerrors.ErrInvalidArgs
+	}
+
+	deadline := time.Time{}
+	if timeout > 0 {
+		deadline = time.Now().Add(timeout)
 	}
 
 	s.mu.Lock()
@@ -79,7 +62,7 @@ func (s *MemoryStorage) XReadManyBlocked(keys []string, ids []string, timeout ti
 		s.mu.Unlock()
 		return nil, err
 	}
-	if len(res) > 0 {
+	if res != nil {
 		s.mu.Unlock()
 		return res, nil
 	}
@@ -90,34 +73,69 @@ func (s *MemoryStorage) XReadManyBlocked(keys []string, ids []string, timeout ti
 	}
 	s.mu.Unlock()
 
+	cleanup := func() {
+		s.mu.Lock()
+		for _, key := range keys {
+			s.removeStreamWaiterLocked(key, w)
+		}
+		s.mu.Unlock()
+	}
+
 	if timeout == 0 {
-		<-w.ch
-	} else {
-		select {
-		case <-w.ch:
-		case <-time.After(timeout):
+		for {
+			<-w.ch
+
 			s.mu.Lock()
-			for _, key := range keys {
-				s.removeStreamWaiterLocked(key, w)
-			}
+			res, err = s.xreadManyFromStartsLocked(keys, starts)
 			s.mu.Unlock()
-			return nil, nil
+
+			if err != nil {
+				cleanup()
+				return nil, err
+			}
+			if res != nil {
+				cleanup()
+				return res, nil
+			}
 		}
 	}
 
-	s.mu.Lock()
-	for _, key := range keys {
-		s.removeStreamWaiterLocked(key, w)
-	}
+	timer := time.NewTimer(time.Until(deadline))
+	defer timer.Stop()
 
-	res, err = s.xreadManyFromStartsLocked(keys, starts)
-	s.mu.Unlock()
+	for {
+		remaining := time.Until(deadline)
+		if remaining <= 0 {
+			cleanup()
+			return nil, nil
+		}
 
-	if err != nil {
-		return nil, err
+		if !timer.Stop() {
+			select {
+			case <-timer.C:
+			default:
+			}
+		}
+		timer.Reset(remaining)
+
+		select {
+		case <-w.ch:
+		case <-timer.C:
+			cleanup()
+			return nil, nil
+		}
+
+		s.mu.Lock()
+		res, err = s.xreadManyFromStartsLocked(keys, starts)
+		s.mu.Unlock()
+
+		if err != nil {
+			cleanup()
+			return nil, err
+		}
+		if res != nil {
+			cleanup()
+			return res, nil
+		}
 	}
-	if len(res) == 0 {
-		return map[string][]value.StreamEntry{}, nil
-	}
-	return res, nil
 }

@@ -22,8 +22,9 @@ func (s *MemoryStorage) XAdd(key string, id string, values []value.StreamKV) (st
 
 	var (
 		st           value.Stream
-		expiresAtPtr = (*time.Time)(nil)
-		last         = (*streamid.ID)(nil)
+		expiresAtPtr *time.Time
+		last         streamid.ID
+		hasLast      bool
 	)
 
 	if ok {
@@ -35,12 +36,13 @@ func (s *MemoryStorage) XAdd(key string, id string, values []value.StreamKV) (st
 		}
 		st = curr
 
-		if n := len(st.V); n > 0 {
-			tmp := st.V[n-1].ID
-			last = &tmp
-		}
+		hasLast = len(st.V) > 0
+		last = st.LastID
 	} else {
-		st = value.Stream{V: []value.StreamEntry{}}
+		st = value.Stream{
+			V:      []value.StreamEntry{},
+			LastID: streamid.ID{Time: 0, Seq: 0},
+		}
 	}
 
 	var newID streamid.ID
@@ -52,11 +54,11 @@ func (s *MemoryStorage) XAdd(key string, id string, values []value.StreamKV) (st
 	case streamidcodec.SpecAutoSeq:
 		t := spec.Time
 
-		if last != nil && t < last.Time {
+		if hasLast && t < last.Time {
 			return "", rerrors.ErrXAddIDTooSmall
 		}
 
-		if last != nil && t == last.Time {
+		if hasLast && t == last.Time {
 			newID = streamid.ID{Time: t, Seq: last.Seq + 1}
 		} else {
 			start := int64(0)
@@ -68,12 +70,10 @@ func (s *MemoryStorage) XAdd(key string, id string, values []value.StreamKV) (st
 
 	case streamidcodec.SpecAutoID:
 		t := time.Now().UnixMilli()
-
 		seq := int64(0)
-		if last != nil && last.Time == t {
+		if hasLast && last.Time == t {
 			seq = last.Seq + 1
 		}
-
 		newID = streamid.ID{Time: t, Seq: seq}
 
 	default:
@@ -84,7 +84,7 @@ func (s *MemoryStorage) XAdd(key string, id string, values []value.StreamKV) (st
 		return "", rerrors.ErrXAddZeroID
 	}
 
-	if last != nil {
+	if hasLast {
 		if newID.Time < last.Time || (newID.Time == last.Time && newID.Seq <= last.Seq) {
 			return "", rerrors.ErrXAddIDTooSmall
 		}
@@ -97,11 +97,10 @@ func (s *MemoryStorage) XAdd(key string, id string, values []value.StreamKV) (st
 		ID:     newID,
 		Values: values,
 	})
-
 	st.LastID = newID
 
 	s.setRecordLocked(key, st, expiresAtPtr)
-
 	s.notifyStreamWaitersLocked(key)
+
 	return idStr, nil
 }

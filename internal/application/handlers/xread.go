@@ -23,7 +23,7 @@ func HandleXRead(storage ports.Storage, c stream.XReadCommand) (response.Respons
 		return apperrors.ToResponse(err), nil
 	}
 
-	if c.Block != nil && res == nil {
+	if res == nil {
 		return response.NullArray{}, nil
 	}
 
@@ -64,6 +64,10 @@ func HandleXRead(storage ports.Storage, c stream.XReadCommand) (response.Respons
 				response.Array{Values: entriesResp},
 			},
 		})
+	}
+
+	if len(streams) == 0 {
+		return response.NullArray{}, nil
 	}
 
 	return response.Array{Values: streams}, nil
