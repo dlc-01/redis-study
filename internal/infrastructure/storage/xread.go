@@ -106,17 +106,24 @@ func (s *MemoryStorage) XReadManyBlocked(keys []string, ids []string, timeout ti
 		return nil, rerrors.ErrInvalidArgs
 	}
 
-	res, err := s.XReadMany(keys, ids)
+	s.mu.Lock()
+	starts, err := s.computeXReadStartsLocked(keys, ids)
 	if err != nil {
+		s.mu.Unlock()
+		return nil, err
+	}
+
+	res, err := s.xreadManyFromStartsLocked(keys, starts)
+	if err != nil {
+		s.mu.Unlock()
 		return nil, err
 	}
 	if len(res) > 0 {
+		s.mu.Unlock()
 		return res, nil
 	}
 
 	w := &xreadWaiter{ch: make(chan struct{}, 1)}
-
-	s.mu.Lock()
 	for _, key := range keys {
 		s.addStreamWaiterLocked(key, w)
 	}
@@ -141,14 +148,15 @@ func (s *MemoryStorage) XReadManyBlocked(keys []string, ids []string, timeout ti
 	for _, key := range keys {
 		s.removeStreamWaiterLocked(key, w)
 	}
+
+	res, err = s.xreadManyFromStartsLocked(keys, starts)
 	s.mu.Unlock()
 
-	res, err = s.XReadMany(keys, ids)
 	if err != nil {
 		return nil, err
 	}
 	if len(res) == 0 {
-		return nil, nil
+		return map[string][]value.StreamEntry{}, nil
 	}
 	return res, nil
 }
