@@ -1,7 +1,9 @@
 package storage
 
 import (
+	"github.com/codecrafters-io/redis-starter-go/internal/application/streamidcodec"
 	"github.com/codecrafters-io/redis-starter-go/internal/domain/rerrors"
+	"github.com/codecrafters-io/redis-starter-go/internal/domain/streamid"
 	"github.com/codecrafters-io/redis-starter-go/internal/domain/value"
 )
 
@@ -14,35 +16,38 @@ func (s *MemoryStorage) XRange(key string, start string, end string) ([]value.St
 		return []value.StreamEntry{}, nil
 	}
 
-	stream, ok := r.v.(value.Stream)
+	st, ok := r.v.(value.Stream)
 	if !ok {
 		return nil, rerrors.ErrWrongType
 	}
 
-	startID, err := parseRangeID(start, true)
+	startID, err := streamidcodec.ParseRangeID(start, true)
 	if err != nil {
 		return nil, err
 	}
 
-	endID, err := parseRangeID(end, false)
+	endID, err := streamidcodec.ParseRangeID(end, false)
 	if err != nil {
 		return nil, err
 	}
 
 	out := make([]value.StreamEntry, 0)
 
-	for _, e := range stream.V {
-		espec, err := parseIDSpec(e.ID)
+	for _, e := range st.V {
+		spec, err := streamidcodec.ParseSpec(e.ID)
 		if err != nil {
 			return nil, err
 		}
-		eid := streamID{Time: espec.t, Seq: espec.seq}
-
-		if cmpID(eid, startID) < 0 {
-			continue
+		if spec.Kind != streamidcodec.SpecExplicit {
+			return nil, rerrors.ErrInvalidStreamID
 		}
 
-		if cmpID(eid, endID) > 0 {
+		eid := streamid.ID{Time: spec.Time, Seq: spec.Seq}
+
+		if streamid.Compare(eid, startID) < 0 {
+			continue
+		}
+		if streamid.Compare(eid, endID) > 0 {
 			break
 		}
 

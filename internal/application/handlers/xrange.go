@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"github.com/codecrafters-io/redis-starter-go/internal/application/commands/stream"
+	"github.com/codecrafters-io/redis-starter-go/internal/application/errors"
 	"github.com/codecrafters-io/redis-starter-go/internal/domain/response"
 	"github.com/codecrafters-io/redis-starter-go/internal/ports"
 )
@@ -9,7 +10,7 @@ import (
 func HandleXRange(storage ports.Storage, c stream.XRangeCommand) (response.Response, error) {
 	entries, err := storage.XRange(c.Key, c.Start, c.End)
 	if err != nil {
-		return nil, err
+		return errors.ToResponse(err), nil
 	}
 
 	out := make([]response.Response, 0, len(entries))

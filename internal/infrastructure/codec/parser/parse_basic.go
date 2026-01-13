@@ -6,6 +6,7 @@ import (
 
 	"github.com/codecrafters-io/redis-starter-go/internal/application"
 	"github.com/codecrafters-io/redis-starter-go/internal/application/commands"
+	"github.com/codecrafters-io/redis-starter-go/internal/domain/rerrors"
 )
 
 func (p *RespParser) parseBasic(args []string) (application.Command, error) {
@@ -16,7 +17,7 @@ func (p *RespParser) parseBasic(args []string) (application.Command, error) {
 
 	case "ECHO":
 		if len(args) != 2 {
-			return nil, fmt.Errorf("ECHO expects 1 argument")
+			return nil, rerrors.WrongNumberOfArgs("echo")
 		}
 		return commands.EchoCommand{Value: args[1]}, nil
 	}

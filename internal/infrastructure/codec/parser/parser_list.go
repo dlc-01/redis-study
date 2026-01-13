@@ -8,6 +8,7 @@ import (
 
 	"github.com/codecrafters-io/redis-starter-go/internal/application"
 	"github.com/codecrafters-io/redis-starter-go/internal/application/commands/list"
+	"github.com/codecrafters-io/redis-starter-go/internal/domain/rerrors"
 )
 
 func (p *RespParser) parseList(args []string) (application.Command, error) {
@@ -15,25 +16,25 @@ func (p *RespParser) parseList(args []string) (application.Command, error) {
 
 	case "RPUSH":
 		if len(args) < 3 {
-			return nil, fmt.Errorf("RPUSH expects at least 2 arguments")
+			return nil, rerrors.WrongNumberOfArgs("rpush")
 		}
 		return list.RPushCommand{Key: args[1], Values: args[2:]}, nil
 
 	case "LPUSH":
 		if len(args) < 3 {
-			return nil, fmt.Errorf("LPUSH expects at least 2 arguments")
+			return nil, rerrors.WrongNumberOfArgs("lpush")
 		}
 		return list.LPushCommand{Key: args[1], Values: args[2:]}, nil
 
 	case "LLEN":
 		if len(args) != 2 {
-			return nil, fmt.Errorf("LLEN expects 1 argument")
+			return nil, rerrors.WrongNumberOfArgs("llen")
 		}
 		return list.LLenCommand{Key: args[1]}, nil
 
 	case "LRANGE":
 		if len(args) != 4 {
-			return nil, fmt.Errorf("LRANGE expects 3 arguments")
+			return nil, rerrors.WrongNumberOfArgs("lrange")
 		}
 		start, err := strconv.Atoi(args[2])
 		if err != nil {
@@ -56,11 +57,11 @@ func (p *RespParser) parseList(args []string) (application.Command, error) {
 			}
 			return list.LPopCommand{Key: args[1], Count: &n}, nil
 		}
-		return nil, fmt.Errorf("LPOP expects 1 or 2 arguments")
+		return nil, rerrors.WrongNumberOfArgs("lpop")
 
 	case "BLPOP":
 		if len(args) != 3 {
-			return nil, fmt.Errorf("BLPOP expects 2 arguments")
+			return nil, rerrors.WrongNumberOfArgs("blpop")
 		}
 
 		timeoutSec, err := strconv.ParseFloat(args[2], 64)

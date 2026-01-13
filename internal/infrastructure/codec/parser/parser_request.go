@@ -35,7 +35,7 @@ func (p *RespParser) ReadCommand() (application.Command, error) {
 	case "SET", "GET", "TYPE":
 		return p.parseString(args)
 
-	case "XADD", "XRANGE":
+	case "XADD", "XRANGE", "XREAD":
 		return p.parseStream(args)
 
 	case "LPUSH", "RPUSH", "LPOP", "LRANGE", "LLEN", "BLPOP":

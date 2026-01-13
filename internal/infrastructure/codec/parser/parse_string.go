@@ -6,6 +6,7 @@ import (
 
 	"github.com/codecrafters-io/redis-starter-go/internal/application"
 	commandString "github.com/codecrafters-io/redis-starter-go/internal/application/commands/string"
+	"github.com/codecrafters-io/redis-starter-go/internal/domain/rerrors"
 )
 
 func (p *RespParser) parseString(args []string) (application.Command, error) {
@@ -13,7 +14,7 @@ func (p *RespParser) parseString(args []string) (application.Command, error) {
 
 	case "GET":
 		if len(args) != 2 {
-			return nil, fmt.Errorf("GET expects 1 argument")
+			return nil, rerrors.WrongNumberOfArgs("get")
 		}
 		return commandString.GetCommand{Key: args[1]}, nil
 
@@ -22,7 +23,7 @@ func (p *RespParser) parseString(args []string) (application.Command, error) {
 
 	case "TYPE":
 		if len(args) != 2 {
-			return nil, fmt.Errorf("TYPE expects 1 argument")
+			return nil, rerrors.WrongNumberOfArgs("type")
 		}
 		return commandString.TypeCommand{
 			Key: args[1],

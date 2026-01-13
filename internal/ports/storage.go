@@ -26,4 +26,5 @@ type Storage interface {
 	Type(key string) (string, error)
 	XAdd(key string, id string, values []value.StreamKV) (string, error)
 	XRange(key string, start, end string) ([]value.StreamEntry, error)
+	XReadMany(keys []string, ids []string) (map[string][]value.StreamEntry, error)
 }

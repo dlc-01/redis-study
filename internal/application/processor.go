@@ -122,6 +122,14 @@ func NewProcessor(storage ports.Storage) *Processor {
 		return handlers.HandleXRange(storage, c)
 	})
 
+	r.Register("XREAD", func(cmd Command) (response.Response, error) {
+		c, err := require[stream.XReadCommand](cmd)
+		if err != nil {
+			return nil, err
+		}
+		return handlers.HandleXRead(storage, c)
+	})
+
 	return &Processor{router: r}
 }
 
