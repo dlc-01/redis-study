@@ -107,5 +107,7 @@ func (s *MemoryStorage) XAdd(key string, id string, values []value.StreamKV) (st
 	})
 
 	s.setRecordLocked(key, st, expiresAtPtr)
+
+	s.notifyStreamWaitersLocked(key)
 	return idStr, nil
 }

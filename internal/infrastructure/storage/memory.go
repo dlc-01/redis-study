@@ -17,11 +17,14 @@ type MemoryStorage struct {
 	data map[string]record
 
 	waiters map[string][]*blpopWaiter
+
+	streamWaiters map[string][]*xreadWaiter
 }
 
 func NewMemoryStorage() *MemoryStorage {
 	return &MemoryStorage{
-		data:    make(map[string]record),
-		waiters: make(map[string][]*blpopWaiter),
+		data:          make(map[string]record),
+		waiters:       make(map[string][]*blpopWaiter),
+		streamWaiters: make(map[string][]*xreadWaiter),
 	}
 }

@@ -2,7 +2,9 @@ package parser
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/codecrafters-io/redis-starter-go/internal/application"
 	"github.com/codecrafters-io/redis-starter-go/internal/application/commands/stream"
@@ -44,25 +46,41 @@ func (p *RespParser) parseStream(args []string) (application.Command, error) {
 		}, nil
 
 	case "XREAD":
-		if len(args) <= 3 {
+		if len(args) < 4 {
 			return nil, rerrors.WrongNumberOfArgs("xread")
 		}
 
-		if strings.ToUpper(args[1]) != "STREAMS" {
-			return nil, fmt.Errorf("ERR syntax error")
+		i := 1
+		var block *time.Duration
+
+		if strings.ToUpper(args[i]) == "BLOCK" {
+			if len(args) < 6 {
+				return nil, rerrors.WrongNumberOfArgs("xread")
+			}
+			ms, err := strconv.ParseInt(args[i+1], 10, 64)
+			if err != nil || ms < 0 {
+				return nil, fmt.Errorf("ERR invalid BLOCK value")
+			}
+			d := time.Duration(ms) * time.Millisecond
+			block = &d
+			i += 2
 		}
 
-		rest := args[2:]
-		if len(rest)%2 != 0 {
+		if strings.ToUpper(args[i]) != "STREAMS" {
+			return nil, fmt.Errorf("ERR syntax error")
+		}
+		i++
+
+		rest := args[i:]
+		if len(rest)%2 != 0 || len(rest) == 0 {
 			return nil, fmt.Errorf("ERR syntax error")
 		}
 
 		n := len(rest) / 2
-		keys := rest[:n]
-		ids := rest[n:]
+		keys := append([]string{}, rest[:n]...)
+		ids := append([]string{}, rest[n:]...)
 
-		return stream.XReadCommand{Keys: keys, IDs: ids}, nil
+		return stream.XReadCommand{Block: block, Keys: keys, IDs: ids}, nil
 	}
-
 	return nil, fmt.Errorf("unknown command")
 }

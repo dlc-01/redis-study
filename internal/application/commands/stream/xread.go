@@ -1,8 +1,11 @@
 package stream
 
+import "time"
+
 type XReadCommand struct {
-	Keys []string
-	IDs  []string
+	Block *time.Duration
+	Keys  []string
+	IDs   []string
 }
 
 func (XReadCommand) Name() string { return "XREAD" }

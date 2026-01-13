@@ -4,13 +4,27 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/internal/application/commands/stream"
 	apperrors "github.com/codecrafters-io/redis-starter-go/internal/application/errors"
 	"github.com/codecrafters-io/redis-starter-go/internal/domain/response"
+	"github.com/codecrafters-io/redis-starter-go/internal/domain/value"
 	"github.com/codecrafters-io/redis-starter-go/internal/ports"
 )
 
 func HandleXRead(storage ports.Storage, c stream.XReadCommand) (response.Response, error) {
-	res, err := storage.XReadMany(c.Keys, c.IDs)
+	var (
+		res map[string][]value.StreamEntry
+		err error
+	)
+
+	if c.Block == nil {
+		res, err = storage.XReadMany(c.Keys, c.IDs)
+	} else {
+		res, err = storage.XReadManyBlocked(c.Keys, c.IDs, *c.Block)
+	}
 	if err != nil {
 		return apperrors.ToResponse(err), nil
+	}
+
+	if c.Block != nil && res == nil {
+		return response.NullArray{}, nil
 	}
 
 	streams := make([]response.Response, 0)
